@@ -27,7 +27,7 @@ const userStates: UserStates = {};
 // پیام‌های تکراری
 const lastMessage: { [chatId: number]: string } = {};
 
-// Webhook بله
+// مسیر Webhook
 app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   const message = req.body.message;
   if (!message?.chat?.id || !message.text) return res.sendStatus(400);
@@ -120,4 +120,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`🚀 سرور اجرا شد روی پورت ${PORT}`);
   await setWebhook();
+  console.log(`🌐 ربات آماده دریافت پیام‌ها روی https://${DOMAIN}/webhook`);
 });
