@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                     // سطح جاوااسکریپت خروجی
+    "module": "commonjs",                   // مناسب برای Node.js
+    "rootDir": "./",                        // ریشه سورس‌کد
+    "outDir": "./dist",                     // مسیر خروجی فایل‌های کامپایل‌شده
+    "strict": true,                         // فعال‌سازی بررسی‌های سخت‌گیرانه
+    "esModuleInterop": true,                // اجازه استفاده از import پیش‌فرض
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true                    // صرف‌نظر از چک کردن type در فایل‌های وابسته
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
