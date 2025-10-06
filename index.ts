@@ -5,7 +5,7 @@ import fs from "fs";
 import FormData from "form-data";
 import path from "path";
 
-// ⚠️ بله Token
+// ⚠️ توکن بله
 const TOKEN = "2110122142:9IBKnThv3KmCc2pcOxDiMFe7w9bSCQaeTXGb";
 const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
 
@@ -100,10 +100,15 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   res.sendStatus(200);
 });
 
-// ثبت خودکار webhook
+// ثبت خودکار webhook و حذف قبلی
 async function setWebhook() {
   const url = `https://${DOMAIN}/webhook`;
   try {
+    // حذف webhook قبلی
+    await axios.post(`${API_URL}/deleteWebhook`);
+    console.log("Webhook قبلی حذف شد.");
+
+    // ثبت webhook جدید
     const res = await axios.post(`${API_URL}/setWebhook`, { url });
     console.log("✅ Webhook ثبت شد:", url, res.data);
   } catch (err: any) {
