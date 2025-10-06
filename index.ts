@@ -8,10 +8,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const TOKEN = process.env.BALE_BOT_TOKEN;
-if (!TOKEN) throw new Error("توکن ربات در .env تعریف نشده!");
+const TOKEN = process.env.BALE_BOT_TOKEN!;
 const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
-const FILES_DIR = "/home/ubuntu-website/lab"; // مسیر فایل‌ها
+const LAB_DIR = "/home/ubuntu-website/lab"; // مسیر اصلی
 
 const app = express();
 app.use(bodyParser.json());
@@ -57,21 +56,30 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         text: "لطفاً کد ملی خود را وارد کنید:",
       });
 
-    // ===== دریافت کد ملی و بررسی پوشه =====
+    // ===== دریافت کد ملی =====
     } else if (state?.state === "awaiting_national_id") {
       const nationalId = text;
-      const userDir = path.join(FILES_DIR, nationalId);
 
-      if (!fs.existsSync(userDir) || !fs.statSync(userDir).isDirectory()) {
+      // پیدا کردن پوشه کاربر داخل هر تاریخ
+      let userDir: string | null = null;
+      const dateFolders = fs.readdirSync(LAB_DIR);
+      for (const dateFolder of dateFolders) {
+        const possibleDir = path.join(LAB_DIR, dateFolder, nationalId);
+        if (fs.existsSync(possibleDir) && fs.statSync(possibleDir).isDirectory()) {
+          userDir = possibleDir;
+          break;
+        }
+      }
+
+      if (!userDir) {
         await axios.post(`${API_URL}/sendMessage`, {
           chat_id: chatId,
-          text: `❌ هیچ پوشه‌ای برای کد ملی ${nationalId} یافت نشد.`,
+          text: `❌ فایلی برای کد ملی ${nationalId} پیدا نشد.`,
         });
         userStates[chatId] = { state: null };
         return res.sendStatus(200);
       }
 
-      // پیدا کردن فایل‌های PDF داخل پوشه
       const files = fs.readdirSync(userDir).filter(f => f.endsWith(".pdf"));
       if (files.length === 0) {
         await axios.post(`${API_URL}/sendMessage`, {
@@ -82,7 +90,6 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         return res.sendStatus(200);
       }
 
-      // دکمه‌ها برای شماره فایل‌ها (1, 2, 3 ...)
       const buttons = files.map(f => [{ text: path.parse(f).name }]);
       await axios.post(`${API_URL}/sendMessage`, {
         chat_id: chatId,
@@ -106,7 +113,24 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         return res.sendStatus(200);
       }
 
-      const filePath = path.join(FILES_DIR, nationalId!, fileName);
+      // پیدا کردن دوباره پوشه کاربر (برای امنیت)
+      let userDir: string | null = null;
+      const dateFolders = fs.readdirSync(LAB_DIR);
+      for (const dateFolder of dateFolders) {
+        const possibleDir = path.join(LAB_DIR, dateFolder, nationalId!);
+        if (fs.existsSync(possibleDir)) {
+          userDir = possibleDir;
+          break;
+        }
+      }
+
+      if (!userDir) {
+        await axios.post(`${API_URL}/sendMessage`, { chat_id: chatId, text: "❌ پوشه کاربر یافت نشد." });
+        userStates[chatId] = { state: null };
+        return res.sendStatus(200);
+      }
+
+      const filePath = path.join(userDir, fileName);
       const form = new FormData();
       form.append("chat_id", chatId);
       form.append("document", fs.createReadStream(filePath));
@@ -116,7 +140,6 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
 
       userStates[chatId] = { state: null };
 
-    // ===== پیام غیرمجاز =====
     } else {
       await axios.post(`${API_URL}/sendMessage`, {
         chat_id: chatId,
