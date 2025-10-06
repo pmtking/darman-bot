@@ -21,7 +21,7 @@ const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
 const DOMAIN = process.env.DOMAIN || "bot.df-neyshabor.ir";
 
 // مسیر فایل‌ها
-const FILES_DIR = "/home/ubuntu-website/darmanBot";
+const FILES_DIR = "/home/ubuntu-website/darmanBot/files";
 
 const app = express();
 app.use(bodyParser.json());
