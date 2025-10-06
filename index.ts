@@ -5,7 +5,7 @@ import fs from "fs";
 import FormData from "form-data";
 import path from "path";
 
-// ⚠️ توکن بله
+// ⚠️ توکن بله (Bale Bot Token)
 const TOKEN = "2110122142:9IBKnThv3KmCc2pcOxDiMFe7w9bSCQaeTXGb";
 const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
 
@@ -27,7 +27,9 @@ const userStates: UserStates = {};
 // پیام‌های تکراری
 const lastMessage: { [chatId: number]: string } = {};
 
-// مسیر Webhook
+// ======================
+// Webhook بله
+// ======================
 app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   const message = req.body.message;
   if (!message?.chat?.id || !message.text) return res.sendStatus(400);
@@ -100,25 +102,35 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   res.sendStatus(200);
 });
 
-// ثبت خودکار webhook و حذف قبلی
+// ======================
+// ثبت خودکار webhook
+// ======================
 async function setWebhook() {
   const url = `https://${DOMAIN}/webhook`;
+
   try {
     // حذف webhook قبلی
-    await axios.post(`${API_URL}/deleteWebhook`);
+    await axios.post(`${API_URL}/deleteWebhook`, {}, {
+      headers: { "Content-Type": "application/json" }
+    });
     console.log("Webhook قبلی حذف شد.");
 
     // ثبت webhook جدید
-    const res = await axios.post(`${API_URL}/setWebhook`, { url });
+    const res = await axios.post(`${API_URL}/setWebhook`, 
+      { url },
+      { headers: { "Content-Type": "application/json" } }
+    );
     console.log("✅ Webhook ثبت شد:", url, res.data);
   } catch (err: any) {
     console.error("❌ خطا در ثبت webhook:", err.response?.data || err.message);
   }
 }
 
+// ======================
+// اجرا سرور
+// ======================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`🚀 سرور اجرا شد روی پورت ${PORT}`);
   await setWebhook();
-  console.log(`🌐 ربات آماده دریافت پیام‌ها روی https://${DOMAIN}/webhook`);
 });
