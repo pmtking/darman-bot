@@ -5,11 +5,15 @@ import fs from "fs";
 import FormData from "form-data";
 import path from "path";
 
+// ⚠️ بله Token
 const TOKEN = "2110122142:9IBKnThv3KmCc2pcOxDiMFe7w9bSCQaeTXGb";
 const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
 
-// ⚠️ دامنه واقعی خود را وارد کنید (با HTTPS فعال)
-const DOMAIN = "bot.drfn.ir";
+// ⚠️ دامنه واقعی با HTTPS فعال
+const DOMAIN = "bot.df-neyshabor.ir";
+
+// مسیر فایل‌ها
+const FILES_DIR = "/home/ubuntu-website/darmanBot";
 
 const app = express();
 app.use(bodyParser.json());
@@ -31,12 +35,14 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   const chatId = message.chat.id;
   const text = message.text.trim();
 
+  // جلوگیری از پیام تکراری
   if (lastMessage[chatId] === text) return res.sendStatus(200);
   lastMessage[chatId] = text;
 
   try {
     if (text === "/start") {
       userStates[chatId] = null;
+      console.log(`کاربر ${chatId} شروع کرد.`);
       await axios.post(`${API_URL}/sendMessage`, {
         chat_id: chatId,
         text: "به ربات خوش آمدید 👋",
@@ -61,17 +67,22 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         text: `در حال بررسی فایل آزمایش برای کد ملی ${nationalId}...`,
       });
 
-      const filePath = path.join("/home/ubuntu-website/darmanBot/", `${nationalId}.pdf`);
+      const filePath = path.join(FILES_DIR, `${nationalId}.pdf`);
+      console.log("بررسی فایل:", filePath);
+
       if (!fs.existsSync(filePath)) {
+        console.log("فایل پیدا نشد:", filePath);
         await axios.post(`${API_URL}/sendMessage`, {
           chat_id: chatId,
           text: `فایل آزمایش برای کد ملی ${nationalId} یافت نشد.`,
         });
       } else {
+        console.log("ارسال فایل به کاربر:", chatId);
         const form = new FormData();
         form.append("chat_id", chatId);
         form.append("document", fs.createReadStream(filePath));
         form.append("caption", `فایل آزمایش شما (کد ملی: ${nationalId})`);
+
         await axios.post(`${API_URL}/sendDocument`, form, { headers: form.getHeaders() });
       }
 
@@ -89,7 +100,7 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   res.sendStatus(200);
 });
 
-// ثبت خودکار webhook هنگام استارت سرور
+// ثبت خودکار webhook
 async function setWebhook() {
   const url = `https://${DOMAIN}/webhook`;
   try {
