@@ -52,28 +52,28 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
     } else if (text === "📝 دریافت آزمایش") {
       userStates[chatId] = { state: "awaiting_national_id" };
       await axios.post(`${API_URL}/sendMessage`, {
-        chat_id,
+        chatId,
         text: "لطفاً کد ملی خود را وارد کنید:",
       });
     } else if (state?.state === "awaiting_national_id") {
       const nationalId = text;
       const userDir = path.join(FILES_DIR, nationalId);
       if (!fs.existsSync(userDir)) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id, text: "فایلی برای این کد ملی پیدا نشد." });
+        await axios.post(`${API_URL}/sendMessage`, { chatId, text: "فایلی برای این کد ملی پیدا نشد." });
         userStates[chatId] = { state: null };
         return res.sendStatus(200);
       }
 
       const files = fs.readdirSync(userDir).filter(f => f.endsWith(".pdf"));
       if (files.length === 0) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id, text: "هیچ فایل آزمایشی موجود نیست." });
+        await axios.post(`${API_URL}/sendMessage`, { chatId, text: "هیچ فایل آزمایشی موجود نیست." });
         userStates[chatId] = { state: null };
         return res.sendStatus(200);
       }
 
       const buttons = files.map(f => [{ text: path.parse(f).name }]); // شماره فایل‌ها
       await axios.post(`${API_URL}/sendMessage`, {
-        chat_id,
+        chatId,
         text: "لطفاً شماره آزمایش مورد نظر را انتخاب کنید:",
         reply_markup: { keyboard: buttons, resize_keyboard: true },
       });
@@ -85,7 +85,7 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
       const fileName = files?.find(f => path.parse(f).name === testNumber);
 
       if (!fileName) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id, text: "شماره آزمایش معتبر نیست." });
+        await axios.post(`${API_URL}/sendMessage`, { chatId, text: "شماره آزمایش معتبر نیست." });
         return res.sendStatus(200);
       }
 
@@ -100,7 +100,7 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
       // بازگرداندن به حالت اولیه
       userStates[chatId] = { state: null };
     } else {
-      await axios.post(`${API_URL}/sendMessage`, { chat_id, text: "لطفاً گزینه موجود را انتخاب کنید." });
+      await axios.post(`${API_URL}/sendMessage`, { chatId, text: "لطفاً گزینه موجود را انتخاب کنید." });
     }
   } catch (err: any) {
     console.error("خطا:", err.response?.data || err.message);
