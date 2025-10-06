@@ -4,13 +4,21 @@ import axios from "axios";
 import fs from "fs";
 import FormData from "form-data";
 import path from "path";
+import dotenv from "dotenv";
 
-// ⚠️ توکن بله (Bale Bot Token)
-const TOKEN = "2110122142:9IBKnThv3KmCc2pcOxDiMFe7w9bSCQaeTXGb";
+dotenv.config(); // بارگذاری متغیرهای محیطی از .env
+
+// ⚠️ توکن بله از فایل .env
+const TOKEN = process.env.BALE_BOT_TOKEN;
+if (!TOKEN) {
+  console.error("❌ توکن ربات در فایل .env تعریف نشده!");
+  process.exit(1);
+}
+
 const API_URL = `https://tapi.bale.ai/bot${TOKEN}`;
 
 // ⚠️ دامنه واقعی با HTTPS فعال
-const DOMAIN = "bot.df-neyshabor.ir";
+const DOMAIN = process.env.DOMAIN || "bot.df-neyshabor.ir";
 
 // مسیر فایل‌ها
 const FILES_DIR = "/home/ubuntu-website/darmanBot";
@@ -37,7 +45,6 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
   const chatId = message.chat.id;
   const text = message.text.trim();
 
-  // جلوگیری از پیام تکراری
   if (lastMessage[chatId] === text) return res.sendStatus(200);
   lastMessage[chatId] = text;
 
@@ -85,7 +92,9 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         form.append("document", fs.createReadStream(filePath));
         form.append("caption", `فایل آزمایش شما (کد ملی: ${nationalId})`);
 
-        await axios.post(`${API_URL}/sendDocument`, form, { headers: form.getHeaders() });
+        await axios.post(`${API_URL}/sendDocument`, form, {
+          headers: form.getHeaders(),
+        });
       }
 
       userStates[chatId] = null;
@@ -107,19 +116,11 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
 // ======================
 async function setWebhook() {
   const url = `https://${DOMAIN}/webhook`;
-
   try {
-    // حذف webhook قبلی
-    await axios.post(`${API_URL}/deleteWebhook`, {}, {
-      headers: { "Content-Type": "application/json" }
-    });
+    await axios.post(`${API_URL}/deleteWebhook`);
     console.log("Webhook قبلی حذف شد.");
 
-    // ثبت webhook جدید
-    const res = await axios.post(`${API_URL}/setWebhook`, 
-      { url },
-      { headers: { "Content-Type": "application/json" } }
-    );
+    const res = await axios.post(`${API_URL}/setWebhook`, { url });
     console.log("✅ Webhook ثبت شد:", url, res.data);
   } catch (err: any) {
     console.error("❌ خطا در ثبت webhook:", err.response?.data || err.message);
