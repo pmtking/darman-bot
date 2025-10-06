@@ -16,15 +16,12 @@ const FILES_DIR = "/home/ubuntu-website/lab"; // مسیر فایل‌ها
 const app = express();
 app.use(bodyParser.json());
 
-// وضعیت کاربران
 interface UserState {
   state: "awaiting_national_id" | "awaiting_test_number" | null;
   nationalId?: string;
   files?: string[];
 }
 const userStates: Record<number, UserState> = {};
-
-// جلوگیری از پیام‌های تکراری
 const lastMessage: Record<number, string> = {};
 
 app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
@@ -60,25 +57,32 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
         text: "لطفاً کد ملی خود را وارد کنید:",
       });
 
-    // ===== دریافت کد ملی =====
+    // ===== دریافت کد ملی و بررسی پوشه =====
     } else if (state?.state === "awaiting_national_id") {
       const nationalId = text;
       const userDir = path.join(FILES_DIR, nationalId);
 
-      if (!fs.existsSync(userDir)) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id: chatId, text: `❌ فایلی برای کد ملی ${nationalId} پیدا نشد.` });
+      if (!fs.existsSync(userDir) || !fs.statSync(userDir).isDirectory()) {
+        await axios.post(`${API_URL}/sendMessage`, {
+          chat_id: chatId,
+          text: `❌ هیچ پوشه‌ای برای کد ملی ${nationalId} یافت نشد.`,
+        });
         userStates[chatId] = { state: null };
         return res.sendStatus(200);
       }
 
+      // پیدا کردن فایل‌های PDF داخل پوشه
       const files = fs.readdirSync(userDir).filter(f => f.endsWith(".pdf"));
       if (files.length === 0) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id: chatId, text: "❌ هیچ فایل آزمایشی موجود نیست." });
+        await axios.post(`${API_URL}/sendMessage`, {
+          chat_id: chatId,
+          text: "❌ هیچ فایل آزمایشی موجود نیست.",
+        });
         userStates[chatId] = { state: null };
         return res.sendStatus(200);
       }
 
-      // ساخت دکمه‌ها برای انتخاب شماره فایل
+      // دکمه‌ها برای شماره فایل‌ها (1, 2, 3 ...)
       const buttons = files.map(f => [{ text: path.parse(f).name }]);
       await axios.post(`${API_URL}/sendMessage`, {
         chat_id: chatId,
@@ -95,7 +99,10 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
       const fileName = files?.find(f => path.parse(f).name === testNumber);
 
       if (!fileName) {
-        await axios.post(`${API_URL}/sendMessage`, { chat_id: chatId, text: "❌ شماره آزمایش معتبر نیست." });
+        await axios.post(`${API_URL}/sendMessage`, {
+          chat_id: chatId,
+          text: "❌ شماره آزمایش معتبر نیست.",
+        });
         return res.sendStatus(200);
       }
 
@@ -107,7 +114,6 @@ app.post("/webhook", async (req: Request<{}, {}, any>, res: Response) => {
 
       await axios.post(`${API_URL}/sendDocument`, form, { headers: form.getHeaders() });
 
-      // بازگرداندن کاربر به حالت اولیه
       userStates[chatId] = { state: null };
 
     // ===== پیام غیرمجاز =====
